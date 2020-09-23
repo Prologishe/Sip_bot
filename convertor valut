@@ -1,0 +1,126 @@
+from tkinter import *
+import tkinter.ttk as ttk
+import datetime
+import urllib.request
+import xml.dom.minidom
+import matplotlib
+import matplotlib.pyplot as plt
+import calendar
+
+def Clicked():
+    s1=box_from.get()
+    s2=box_in.get()
+    v1=0
+    v2=0
+    for node in nodeArray:
+        if (node.childNodes[3].childNodes[0].nodeValue==s1):
+            sn1=node.childNodes[4].childNodes[0].nodeValue.replace(',','.')
+            v1=float(sn1)/float(node.childNodes[2].childNodes[0].nodeValue)
+        if (node.childNodes[3].childNodes[0].nodeValue==s2):
+            sn2=node.childNodes[4].childNodes[0].nodeValue.replace(',','.')
+            v2=float(sn2)/float(node.childNodes[2].childNodes[0].nodeValue)
+        if (s1=="Российский рубль"):
+            v1=1
+        if (s2=="Российский рубль"):
+            v2=1
+    vM=float(text_box.get())
+    lab=Label(tab1,fg="black",width=35,text=str(vM*v1/v2))
+    lab.grid(column=35,row=12)       
+
+def Clicked2():
+    x=[]
+    y=[]
+    count=0
+    s1=box_mounth.get()
+    s2=box_tu.get()
+    dtt=datetime.datetime.strptime(s1,'%B, %Y')
+    sdate=datetime.datetime.strftime(dtt,'%m/%Y')
+    rang=calendar.monthrange(int(sdate[3]+sdate[4]+sdate[5]+sdate[6]),int(sdate[0]+sdate[1]))[1]
+    for i in range(1,rang+1):
+        y.append(float(i))
+        st='{0:0>2}'.format(i)+'/'+sdate
+        response1=urllib.request.urlopen("http://www.cbr.ru/scripts/XML_daily.asp?date_req="+st)
+        dom=xml.dom.minidom.parse(response1)
+        nodeArray2=dom.getElementsByTagName("Valute")
+        for node in nodeArray2:
+            if (node.childNodes[3].childNodes[0].nodeValue==s2):
+                count=nodeArray2.index(node)
+        sn2=nodeArray2[count].childNodes[4].childNodes[0].nodeValue.replace(',','.')
+        x.append(float(sn2))
+    #print(x)
+    #print(y)
+    fig=plt.figure()
+    canvas= matplotlib.backends.backend_tkagg.FigureCanvasTkAgg(fig,master=tab2)
+    plot_widget=canvas.get_tk_widget()
+    fig.clear()
+    plt.plot(y,x)
+    plt.grid()
+    plot_widget.grid(column=20,row=100,padx=20)
+
+    #print("http://www.cbr.ru/scripts/XML_daily.asp?date_req="+'01/'+st)
+
+root= Tk()
+root.title("Main window")
+root.geometry("1200x700")
+
+tab_c=ttk.Notebook(root)
+tab_c.grid(column=0,row=0)
+tab1=ttk.Frame(tab_c)
+tab2=ttk.Frame(tab_c)
+tab_c.add(tab1, text="Converter")
+tab_c.add(tab2, text="Graph")
+
+box_from=ttk.Combobox(tab1, width=35)
+box_from.grid(column=10,row=5)
+
+box_in=ttk.Combobox(tab1, width=35)
+box_in.grid(column=35, row=5,padx=10)
+
+text_box=Entry(tab1,width=35)
+text_box.grid(column=10, row=12,padx=10)
+
+
+but_1=Button(tab1,width=35,text="Convert",command=Clicked)
+but_1.grid(column=500,row=5,padx=10)
+
+
+s=datetime.datetime.now().strftime("%d/%m/%Y")
+response=urllib.request.urlopen("http://www.cbr.ru/scripts/XML_daily.asp?date_req="+s) 
+
+dom=xml.dom.minidom.parse(response)
+dom.normalize()
+nodeArray=dom.getElementsByTagName("Valute")
+l=["Российский рубль"]
+for node in nodeArray:
+
+    l.append(node.childNodes[3].childNodes[0].nodeValue)
+
+box_in["values"]=l
+box_from["values"]=l
+
+
+but_2=Button(tab2,width=35,text="graph",command=Clicked2)
+but_2.grid(column=10,row=7,pady=5)
+
+box_mounth=ttk.Combobox(tab2, width=35)
+box_mounth.grid(column=10,row=5)
+
+box_tu=ttk.Combobox(tab2, width=35)
+box_tu.grid(column=10, row=6,pady=5)
+l.remove("Российский рубль")
+box_tu["values"]=l
+
+l=[]
+for i in range(5,13):
+    dt=datetime.datetime.strptime(str(i)+", 2018",'%m, %Y')
+    l.append(datetime.datetime.strftime(dt,'%B, %Y'))
+for i in range(1,5):
+    dt=datetime.datetime.strptime(str(i)+", 2019",'%m, %Y')
+    l.append(datetime.datetime.strftime(dt,'%B, %Y'))
+box_mounth["values"]=l
+
+matplotlib.use('TkAgg')
+
+tab_c.pack(expand = 1, fill = 'both')
+root.mainloop()
+
